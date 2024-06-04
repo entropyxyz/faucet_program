@@ -1,0 +1,46 @@
+[package]
+name = "faucet-program"
+version = "0.1.0"
+authors = ["Jesse Abramowitz <jesse@entropy.xyz>"]
+license = "Unlicense"
+edition = "2021"
+
+[workspace]
+members = ["generate-types", ".", "cli"]
+resolver = "2"
+
+# strip debug info since that makes up a major part of Wasm blobs, see Wasm's `twiggy`
+[profile.release]
+strip = "debuginfo"
+
+# This is required to compile programs to a wasm module and for use in rust libs
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+entropy-programs-core={ git="https://github.com/entropyxyz/programs.git", tag="v0.10.0" }
+schemars = {version = "0.8.16", optional = true}
+serde = { version = "1.0", default-features = false, features = ["alloc", "derive"] }
+subxt = { version = "0.35.3", default-features=false, features=["native"], target_arch = "wasm32" }
+hex             ={ version="0.4.3" }
+codec = { package = "parity-scale-codec", version = "3.6.9", default-features = false }
+serde_json = "1.0.48"
+frame-metadata = { version = "16.0.0", default-features = false }
+
+# These are used by `cargo component`
+[package.metadata.component]
+package = "entropy:faucet-program"
+
+[package.metadata.component.dependencies]
+
+# Metadata related to an Entropy program
+[package.metadata.entropy-program]
+
+# The docker image used to build this program
+docker-image = "entropyxyz/build-entropy-programs:v0.0.1"
+
+# Configuration interface description
+# interface-description = ""
+
+[features]
+std = ["schemars"]

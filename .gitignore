@@ -1,0 +1,4 @@
+/target
+faucet-program_serialized_config_type.txt
+faucet-program_serialized_aux_data_type.txt
+.env
