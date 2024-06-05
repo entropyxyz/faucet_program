@@ -48,7 +48,6 @@ pub struct AuxData {
     pub header: SubstrateHeader<u32, BlakeTwo256>,
     pub mortality: u64,
     pub nonce: u64,
-    pub tx_call: String,
     pub string_account_id: String,
     pub amount: u128,
 }
