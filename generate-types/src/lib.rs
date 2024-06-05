@@ -1,6 +1,6 @@
+use program::{AuxData, UserConfig};
 use schemars::schema_for;
 use std::fs;
-use program::{UserConfig, AuxData};
 
 pub fn generate_types() {
     let schema_config = schema_for!(UserConfig);
