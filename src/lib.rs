@@ -107,6 +107,7 @@ impl Program for FaucetProgram {
         assert_eq!(partial.signer_payload(), message);
 
         // balance constraint check
+        // TODO: make this a user config option to generalize more
         if aux_data_json.amount > 1000u128 {
             return Err(Error::Evaluation("Asked for too many tokens".to_string()));
         }
