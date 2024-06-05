@@ -144,7 +144,7 @@ pub fn get_offline_api(
     // let meta = Metadata::try_from(json).unwrap();//RuntimeMetadataV15::from(entropy_metadata[1]).into();
     // // let encoded = meta.encode();
     // Metadata::decode(&mut &*encoded).unwrap()
-    let metadata = Metadata::decode(&mut &*entropy_metadata.as_bytes()).unwrap();
+    let metadata = Metadata::decode(&mut &*entropy_metadata.to_vec()).unwrap();
     // let meta = Metadata::try_from(json).unwrap();
     // Create an offline client using the details obtained above:
     OfflineClient::<EntropyConfig>::new(genesis_hash, runtime_version, metadata)
