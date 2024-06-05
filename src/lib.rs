@@ -9,19 +9,25 @@ use alloc::{
     string::{String, ToString},
     vec::Vec,
 };
-
 use entropy_programs_core::{bindgen::Error, bindgen::*, export_program, prelude::*};
 use serde::{Deserialize, Serialize};
 // pub mod api;
 #[cfg(test)]
 mod tests;
-
+use alloc::vec;
+use core::str::FromStr;
+use subxt::dynamic::tx;
+use subxt::ext::scale_value::{At, Composite, Value};
+use subxt::tx::Payload;
 pub use subxt::PolkadotConfig as EntropyConfig;
 use subxt::{
     backend::{legacy::LegacyRpcMethods, rpc::RpcClient},
+    config::substrate::{BlakeTwo256, SubstrateHeader},
+    config::PolkadotExtrinsicParamsBuilder as Params,
+    tx::TxPayload,
+    utils::AccountId32,
     OnlineClient,
 };
-
 mod metadata;
 use metadata::metadata as entropy_metadata;
 // TODO confirm this isn't an issue for audit
@@ -39,6 +45,11 @@ pub struct AuxData {
     pub genesis_hash: String,
     pub spec_version: u32,
     pub transaction_version: u32,
+    pub header: SubstrateHeader<u32, BlakeTwo256>,
+    pub mortality: u64,
+    pub nonce: u64,
+    pub tx_call: String,
+    pub string_account_id: String,
 }
 
 pub struct FaucetProgram;
@@ -65,11 +76,30 @@ impl Program for FaucetProgram {
             Error::InvalidSignatureRequest(format!("Failed to parse auxilary_data: {}", e))
         })?;
 
-        let api = get_offline_api(
+        let (api, metadata) = get_offline_api(
             aux_data_json.genesis_hash,
             aux_data_json.spec_version,
             aux_data_json.transaction_version,
         );
+        let account_id = AccountId32::from_str(&aux_data_json.string_account_id).unwrap();
+        let balance_transfer_tx = tx(
+            "Balances",
+            "transfer_allow_death",
+            vec![
+                Value::unnamed_variant("Id", vec![Value::from_bytes(account_id)]),
+                Value::u128(10_000u128),
+            ],
+        );
+
+        let tx_params = Params::new()
+            .mortal(&aux_data_json.header, aux_data_json.mortality)
+            .nonce(aux_data_json.nonce)
+            .build();
+
+        let partial = api
+            .tx()
+            .create_partial_signed_offline(&balance_transfer_tx, tx_params)
+            .unwrap();
         Ok(())
     }
 
@@ -91,7 +121,7 @@ pub fn get_offline_api(
     hash: String,
     spec_version: u32,
     transaction_version: u32,
-) -> OfflineClient<EntropyConfig> {
+) -> (OfflineClient<EntropyConfig>, Metadata) {
     let genesis_hash = {
         // let h = "44670a68177821a6166b25f8d86b45e0f1c3b280ff576eea64057e4b0dd9ff4a";
         let bytes = hex::decode(hash).unwrap();
@@ -114,6 +144,9 @@ pub fn get_offline_api(
     let metadata = Metadata::decode(&mut &*entropy_metadata.as_bytes()).unwrap();
     // let meta = Metadata::try_from(json).unwrap();
     // Create an offline client using the details obtained above:
-    OfflineClient::<EntropyConfig>::new(genesis_hash, runtime_version, metadata)
+    (
+        OfflineClient::<EntropyConfig>::new(genesis_hash, runtime_version, metadata.clone()),
+        metadata,
+    )
 }
 export_program!(FaucetProgram);
