@@ -29,23 +29,39 @@ fn test_should_sign() {
         genesis_hash,
         spec_version,
         transaction_version,
-        header,
-        mortality,
-        nonce,
-        string_account_id: string_account_id.to_string(),
+        header: header.clone(),
+        mortality: mortality.clone(),
+        nonce: nonce.clone(),
+        string_account_id: string_account_id.clone().to_string(),
         amount,
     };
+
+    let account_id = AccountId32::from_str(&string_account_id).unwrap();
+
+    let balance_transfer_tx = tx(
+        "Balances",
+        "transfer_allow_death",
+        vec![
+            Value::unnamed_variant("Id", vec![Value::from_bytes(account_id)]),
+            Value::u128(amount),
+        ],
+    );
+
+    let tx_params = Params::new()
+        .mortal(&header, mortality)
+        .nonce(nonce)
+        .build();
+
+    let partial = api
+        .tx()
+        .create_partial_signed_offline(&balance_transfer_tx, tx_params)
+        .unwrap()
+        .signer_payload();
+
     let signature_request = SignatureRequest {
-        message: b"some_message".to_vec(),
+        message: partial.to_vec(),
         auxilary_data: Some(serde_json::to_string(&aux_data).unwrap().into_bytes()),
     };
 
-    assert_eq!(
-        FaucetProgram::evaluate(signature_request, None, None,)
-            .unwrap_err()
-            .to_string(),
-        ""
-    );
-
-    // assert!(FaucetProgram::evaluate(signature_request, None, None).is_ok());
+    assert!(FaucetProgram::evaluate(signature_request, None, None).is_ok());
 }
