@@ -29,7 +29,7 @@ fn test_should_sign() {
         genesis_hash,
         spec_version,
         transaction_version,
-        header: header.clone(),
+        header_string: numeric_block_number_json,
         mortality: mortality.clone(),
         nonce: nonce.clone(),
         string_account_id: string_account_id.clone().to_string(),

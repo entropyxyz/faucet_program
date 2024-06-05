@@ -8,7 +8,7 @@ use project_root::get_project_root;
 async fn main() -> anyhow::Result<()> {
     dotenv().ok();
     let program = format!(
-        "{}/target/wasm32-unknown-unknown/release/faucet-program.wasm",
+        "{}/target/wasm32-unknown-unknown/release/faucet_program.wasm",
         get_project_root()?.to_string_lossy()
     );
     generate_types();

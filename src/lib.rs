@@ -45,7 +45,7 @@ pub struct AuxData {
     pub genesis_hash: String,
     pub spec_version: u32,
     pub transaction_version: u32,
-    pub header: SubstrateHeader<u32, BlakeTwo256>,
+    pub header_string: String,
     pub mortality: u64,
     pub nonce: u64,
     pub string_account_id: String,
@@ -91,8 +91,11 @@ impl Program for FaucetProgram {
             ],
         );
 
+        let header: SubstrateHeader<u32, BlakeTwo256> =
+            serde_json::from_str(&aux_data_json.header_string).expect("valid block header");
+        
         let tx_params = Params::new()
-            .mortal(&aux_data_json.header, aux_data_json.mortality)
+            .mortal(&header, aux_data_json.mortality)
             .nonce(aux_data_json.nonce)
             .build();
 
@@ -122,8 +125,7 @@ use subxt::utils::H256;
 use subxt::Metadata;
 use subxt::OfflineClient;
 
-// use frame_metadata::{v15::RuntimeMetadataV15};
-/// Creates an api instance to talk to chain
+/// Creates an offline api instance
 /// Chain endpoint set on launch
 pub fn get_offline_api(
     hash: String,
@@ -131,7 +133,6 @@ pub fn get_offline_api(
     transaction_version: u32,
 ) -> OfflineClient<EntropyConfig> {
     let genesis_hash = {
-        // let h = "44670a68177821a6166b25f8d86b45e0f1c3b280ff576eea64057e4b0dd9ff4a";
         let bytes = hex::decode(hash).unwrap();
         H256::from_slice(&bytes)
     };
@@ -142,15 +143,11 @@ pub fn get_offline_api(
         transaction_version,
     };
 
-    // 3. Metadata (I'll load it from the downloaded metadata, but you can use
-    //    `subxt metadata > file.scale` to download it):
-    // let json: serde_json::Value =
-    //     serde_json::from_str(entropy_metadata).expect("JSON was not well-formatted");
-    // let meta = Metadata::try_from(json).unwrap();//RuntimeMetadataV15::from(entropy_metadata[1]).into();
-    // // let encoded = meta.encode();
-    // Metadata::decode(&mut &*encoded).unwrap()
+    // Metadata comes from metadata.rs, which is a Vec<u8> representation of the metadata
+    // It takes a lot of space and is clunky.....I am very open to better ideas
     let metadata = Metadata::decode(&mut &*entropy_metadata.to_vec()).unwrap();
-    // let meta = Metadata::try_from(json).unwrap();
+    
+
     // Create an offline client using the details obtained above:
     OfflineClient::<EntropyConfig>::new(genesis_hash, runtime_version, metadata)
 }
