@@ -102,6 +102,12 @@ impl Program for FaucetProgram {
             .unwrap();
         // compare message to tx built with params, now we can apply constraint logic to params with validated info
         assert_eq!(partial.signer_payload(), message);
+
+        // balance constraint check
+        if aux_data_json.amount > 1000u128 {
+            return Err(Error::Evaluation("Asked for too many tokens".to_string()));
+        }
+
         Ok(())
     }
 
