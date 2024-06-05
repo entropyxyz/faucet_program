@@ -50,6 +50,7 @@ pub struct AuxData {
     pub nonce: u64,
     pub tx_call: String,
     pub string_account_id: String,
+    pub amount: u128,
 }
 
 pub struct FaucetProgram;
@@ -76,7 +77,7 @@ impl Program for FaucetProgram {
             Error::InvalidSignatureRequest(format!("Failed to parse auxilary_data: {}", e))
         })?;
 
-        let (api, metadata) = get_offline_api(
+        let api = get_offline_api(
             aux_data_json.genesis_hash,
             aux_data_json.spec_version,
             aux_data_json.transaction_version,
@@ -87,7 +88,7 @@ impl Program for FaucetProgram {
             "transfer_allow_death",
             vec![
                 Value::unnamed_variant("Id", vec![Value::from_bytes(account_id)]),
-                Value::u128(10_000u128),
+                Value::u128(aux_data_json.amount),
             ],
         );
 
@@ -100,6 +101,8 @@ impl Program for FaucetProgram {
             .tx()
             .create_partial_signed_offline(&balance_transfer_tx, tx_params)
             .unwrap();
+        // compare message to tx built with params, now we can apply constraint logic to params with validated info
+        assert_eq!(partial.signer_payload(), message);
         Ok(())
     }
 
@@ -121,7 +124,7 @@ pub fn get_offline_api(
     hash: String,
     spec_version: u32,
     transaction_version: u32,
-) -> (OfflineClient<EntropyConfig>, Metadata) {
+) -> OfflineClient<EntropyConfig> {
     let genesis_hash = {
         // let h = "44670a68177821a6166b25f8d86b45e0f1c3b280ff576eea64057e4b0dd9ff4a";
         let bytes = hex::decode(hash).unwrap();
@@ -144,9 +147,6 @@ pub fn get_offline_api(
     let metadata = Metadata::decode(&mut &*entropy_metadata.as_bytes()).unwrap();
     // let meta = Metadata::try_from(json).unwrap();
     // Create an offline client using the details obtained above:
-    (
-        OfflineClient::<EntropyConfig>::new(genesis_hash, runtime_version, metadata.clone()),
-        metadata,
-    )
+    OfflineClient::<EntropyConfig>::new(genesis_hash, runtime_version, metadata)
 }
 export_program!(FaucetProgram);
