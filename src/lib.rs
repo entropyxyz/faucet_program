@@ -9,7 +9,7 @@ use alloc::{
     string::{String, ToString},
     vec::Vec,
 };
-use entropy_programs_core::{bindgen::Error, bindgen::*, export_program, prelude::*};
+use entropy_programs_core::{bindgen::*, export_program, prelude::*};
 use serde::{Deserialize, Serialize};
 // pub mod api;
 #[cfg(test)]
@@ -17,19 +17,15 @@ mod tests;
 use alloc::vec;
 use core::str::FromStr;
 use subxt::dynamic::tx;
-use subxt::ext::scale_value::{At, Composite, Value};
-use subxt::tx::Payload;
+use subxt::ext::scale_value::Value;
 pub use subxt::PolkadotConfig as EntropyConfig;
 use subxt::{
-    backend::{legacy::LegacyRpcMethods, rpc::RpcClient},
     config::substrate::{BlakeTwo256, SubstrateHeader},
     config::PolkadotExtrinsicParamsBuilder as Params,
-    tx::TxPayload,
     utils::AccountId32,
-    OnlineClient,
 };
 mod metadata;
-use metadata::metadata as entropy_metadata;
+use metadata::METADATA;
 // TODO confirm this isn't an issue for audit
 register_custom_getrandom!(always_fail);
 
@@ -93,7 +89,7 @@ impl Program for FaucetProgram {
 
         let header: SubstrateHeader<u32, BlakeTwo256> =
             serde_json::from_str(&aux_data_json.header_string).expect("valid block header");
-        
+
         let tx_params = Params::new()
             .mortal(&header, aux_data_json.mortality)
             .nonce(aux_data_json.nonce)
@@ -121,7 +117,6 @@ impl Program for FaucetProgram {
     }
 }
 use codec::Decode;
-use frame_metadata::{v15::RuntimeMetadataV15, RuntimeMetadata, RuntimeMetadataPrefixed};
 use subxt::utils::H256;
 use subxt::Metadata;
 use subxt::OfflineClient;
@@ -146,8 +141,7 @@ pub fn get_offline_api(
 
     // Metadata comes from metadata.rs, which is a Vec<u8> representation of the metadata
     // It takes a lot of space and is clunky.....I am very open to better ideas
-    let metadata = Metadata::decode(&mut &*entropy_metadata.to_vec()).unwrap();
-    
+    let metadata = Metadata::decode(&mut &*METADATA.to_vec()).unwrap();
 
     // Create an offline client using the details obtained above:
     OfflineClient::<EntropyConfig>::new(genesis_hash, runtime_version, metadata)

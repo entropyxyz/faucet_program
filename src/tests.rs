@@ -29,10 +29,10 @@ fn test_should_sign() {
         genesis_hash,
         spec_version,
         transaction_version,
-        header_string: numeric_block_number_json,
+        header_string: numeric_block_number_json.to_string(),
         mortality: mortality.clone(),
         nonce: nonce.clone(),
-        string_account_id: string_account_id.clone().to_string(),
+        string_account_id: string_account_id.to_string(),
         amount,
     };
 
