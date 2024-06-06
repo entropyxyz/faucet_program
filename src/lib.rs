@@ -100,7 +100,9 @@ impl Program for FaucetProgram {
             .create_partial_signed_offline(&balance_transfer_tx, tx_params)
             .unwrap();
         // compare message to tx built with params, now we can apply constraint logic to params with validated info
-        assert_eq!(partial.signer_payload(), message);
+        if partial.signer_payload() != message {
+            return Err(Error::Evaluation("Signatures don't match".to_string()));
+        }
 
         // balance constraint check
         // TODO: make this a user config option to generalize more
