@@ -28,8 +28,9 @@ use subxt::{
     utils::AccountId32,
     OnlineClient,
 };
-mod metadata;
-use metadata::metadata as entropy_metadata;
+
+include!(concat!(env!("OUT_DIR"), "/metadata.rs"));
+
 // TODO confirm this isn't an issue for audit
 register_custom_getrandom!(always_fail);
 
@@ -93,7 +94,7 @@ impl Program for FaucetProgram {
 
         let header: SubstrateHeader<u32, BlakeTwo256> =
             serde_json::from_str(&aux_data_json.header_string).expect("valid block header");
-        
+
         let tx_params = Params::new()
             .mortal(&header, aux_data_json.mortality)
             .nonce(aux_data_json.nonce)
@@ -146,8 +147,7 @@ pub fn get_offline_api(
 
     // Metadata comes from metadata.rs, which is a Vec<u8> representation of the metadata
     // It takes a lot of space and is clunky.....I am very open to better ideas
-    let metadata = Metadata::decode(&mut &*entropy_metadata.to_vec()).unwrap();
-    
+    let metadata = Metadata::decode(&mut &*METADATA.to_vec()).unwrap();
 
     // Create an offline client using the details obtained above:
     OfflineClient::<EntropyConfig>::new(genesis_hash, runtime_version, metadata)
