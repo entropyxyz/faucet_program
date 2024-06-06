@@ -145,9 +145,9 @@ pub fn get_offline_api(
         transaction_version,
     };
 
-    // Metadata comes from metadata.rs, which is a Vec<u8> representation of the metadata
+    // Metadata comes from metadata.rs, which is a &[u8] representation of the metadata
     // It takes a lot of space and is clunky.....I am very open to better ideas
-    let metadata = Metadata::decode(&mut &*METADATA.to_vec()).unwrap();
+    let metadata = Metadata::decode(&mut &*METADATA).unwrap();
 
     // Create an offline client using the details obtained above:
     OfflineClient::<EntropyConfig>::new(genesis_hash, runtime_version, metadata)
