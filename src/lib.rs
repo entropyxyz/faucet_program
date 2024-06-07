@@ -24,8 +24,9 @@ use subxt::{
     config::PolkadotExtrinsicParamsBuilder as Params,
     utils::AccountId32,
 };
-mod metadata;
-use metadata::METADATA;
+
+include!(concat!(env!("OUT_DIR"), "/metadata.rs"));
+
 // TODO confirm this isn't an issue for audit
 register_custom_getrandom!(always_fail);
 
@@ -76,8 +77,9 @@ impl Program for FaucetProgram {
             aux_data_json.genesis_hash,
             aux_data_json.spec_version,
             aux_data_json.transaction_version,
-        );
-        let account_id = AccountId32::from_str(&aux_data_json.string_account_id).unwrap();
+        )?;
+        let account_id = AccountId32::from_str(&aux_data_json.string_account_id)
+            .map_err(|e| Error::InvalidSignatureRequest(format!("account id issue: {}", e)))?;
         let balance_transfer_tx = tx(
             "Balances",
             "transfer_allow_death",
@@ -98,7 +100,7 @@ impl Program for FaucetProgram {
         let partial = api
             .tx()
             .create_partial_signed_offline(&balance_transfer_tx, tx_params)
-            .unwrap();
+            .map_err(|e| Error::InvalidSignatureRequest(format!("partial api create: {}", e)))?;
         // compare message to tx built with params, now we can apply constraint logic to params with validated info
         if partial.signer_payload() != message {
             return Err(Error::Evaluation("Signatures don't match".to_string()));
@@ -129,9 +131,11 @@ pub fn get_offline_api(
     hash: String,
     spec_version: u32,
     transaction_version: u32,
-) -> OfflineClient<EntropyConfig> {
+) -> Result<OfflineClient<EntropyConfig>, Error> {
     let genesis_hash = {
-        let bytes = hex::decode(hash).unwrap();
+        let bytes = hex::decode(hash).map_err(|e| {
+            Error::InvalidSignatureRequest(format!("Failed to parse bytes: {}", e))
+        })?;
         H256::from_slice(&bytes)
     };
 
@@ -141,11 +145,16 @@ pub fn get_offline_api(
         transaction_version,
     };
 
-    // Metadata comes from metadata.rs, which is a Vec<u8> representation of the metadata
+    // Metadata comes from metadata.rs, which is a &[u8] representation of the metadata
     // It takes a lot of space and is clunky.....I am very open to better ideas
-    let metadata = Metadata::decode(&mut &*METADATA.to_vec()).unwrap();
+    let metadata = Metadata::decode(&mut &*METADATA)
+        .map_err(|e| Error::InvalidSignatureRequest(format!("Failed to parse metadata: {}", e)))?;
 
     // Create an offline client using the details obtained above:
-    OfflineClient::<EntropyConfig>::new(genesis_hash, runtime_version, metadata)
+    Ok(OfflineClient::<EntropyConfig>::new(
+        genesis_hash,
+        runtime_version,
+        metadata,
+    ))
 }
 export_program!(FaucetProgram);

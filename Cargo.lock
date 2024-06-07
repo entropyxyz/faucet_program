@@ -1693,7 +1693,6 @@ dependencies = [
  "entropy-programs-core",
  "frame-metadata 16.0.0",
  "hex",
- "lazy_static",
  "parity-scale-codec",
  "schemars",
  "serde",
