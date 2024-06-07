@@ -9,7 +9,7 @@ use alloc::{
     string::{String, ToString},
     vec::Vec,
 };
-use entropy_programs_core::{bindgen::Error, bindgen::*, export_program, prelude::*};
+use entropy_programs_core::{bindgen::*, export_program, prelude::*};
 use serde::{Deserialize, Serialize};
 // pub mod api;
 #[cfg(test)]
@@ -17,16 +17,12 @@ mod tests;
 use alloc::vec;
 use core::str::FromStr;
 use subxt::dynamic::tx;
-use subxt::ext::scale_value::{At, Composite, Value};
-use subxt::tx::Payload;
+use subxt::ext::scale_value::Value;
 pub use subxt::PolkadotConfig as EntropyConfig;
 use subxt::{
-    backend::{legacy::LegacyRpcMethods, rpc::RpcClient},
     config::substrate::{BlakeTwo256, SubstrateHeader},
     config::PolkadotExtrinsicParamsBuilder as Params,
-    tx::TxPayload,
     utils::AccountId32,
-    OnlineClient,
 };
 
 include!(concat!(env!("OUT_DIR"), "/metadata.rs"));
@@ -81,8 +77,9 @@ impl Program for FaucetProgram {
             aux_data_json.genesis_hash,
             aux_data_json.spec_version,
             aux_data_json.transaction_version,
-        );
-        let account_id = AccountId32::from_str(&aux_data_json.string_account_id).unwrap();
+        )?;
+        let account_id = AccountId32::from_str(&aux_data_json.string_account_id)
+            .map_err(|e| Error::InvalidSignatureRequest(format!("account id issue: {}", e)))?;
         let balance_transfer_tx = tx(
             "Balances",
             "transfer_allow_death",
@@ -103,9 +100,11 @@ impl Program for FaucetProgram {
         let partial = api
             .tx()
             .create_partial_signed_offline(&balance_transfer_tx, tx_params)
-            .unwrap();
+            .map_err(|e| Error::InvalidSignatureRequest(format!("partial api create: {}", e)))?;
         // compare message to tx built with params, now we can apply constraint logic to params with validated info
-        assert_eq!(partial.signer_payload(), message);
+        if partial.signer_payload() != message {
+            return Err(Error::Evaluation("Signatures don't match".to_string()));
+        }
 
         // balance constraint check
         // TODO: make this a user config option to generalize more
@@ -122,7 +121,6 @@ impl Program for FaucetProgram {
     }
 }
 use codec::Decode;
-use frame_metadata::{v15::RuntimeMetadataV15, RuntimeMetadata, RuntimeMetadataPrefixed};
 use subxt::utils::H256;
 use subxt::Metadata;
 use subxt::OfflineClient;
@@ -133,9 +131,11 @@ pub fn get_offline_api(
     hash: String,
     spec_version: u32,
     transaction_version: u32,
-) -> OfflineClient<EntropyConfig> {
+) -> Result<OfflineClient<EntropyConfig>, Error> {
     let genesis_hash = {
-        let bytes = hex::decode(hash).unwrap();
+        let bytes = hex::decode(hash).map_err(|e| {
+            Error::InvalidSignatureRequest(format!("Failed to parse bytes: {}", e))
+        })?;
         H256::from_slice(&bytes)
     };
 
@@ -147,9 +147,14 @@ pub fn get_offline_api(
 
     // Metadata comes from metadata.rs, which is a &[u8] representation of the metadata
     // It takes a lot of space and is clunky.....I am very open to better ideas
-    let metadata = Metadata::decode(&mut &*METADATA).unwrap();
+    let metadata = Metadata::decode(&mut &*METADATA)
+        .map_err(|e| Error::InvalidSignatureRequest(format!("Failed to parse metadata: {}", e)))?;
 
     // Create an offline client using the details obtained above:
-    OfflineClient::<EntropyConfig>::new(genesis_hash, runtime_version, metadata)
+    Ok(OfflineClient::<EntropyConfig>::new(
+        genesis_hash,
+        runtime_version,
+        metadata,
+    ))
 }
 export_program!(FaucetProgram);
