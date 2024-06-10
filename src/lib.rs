@@ -33,7 +33,9 @@ register_custom_getrandom!(always_fail);
 /// JSON-deserializable struct that will be used to derive the program-JSON interface.
 #[cfg_attr(feature = "std", derive(schemars::JsonSchema))]
 #[derive(Debug, PartialEq, Eq, Clone, Serialize, Deserialize)]
-pub struct UserConfig {}
+pub struct UserConfig {
+    max_transfer_amount: u128,
+}
 
 /// JSON representation of the auxiliary data
 #[cfg_attr(feature = "std", derive(schemars::JsonSchema))]
@@ -54,7 +56,7 @@ pub struct FaucetProgram;
 impl Program for FaucetProgram {
     fn evaluate(
         signature_request: SignatureRequest,
-        _config: Option<Vec<u8>>,
+        config: Option<Vec<u8>>,
         _oracle_data: Option<Vec<u8>>,
     ) -> Result<(), Error> {
         let SignatureRequest {
@@ -72,6 +74,13 @@ impl Program for FaucetProgram {
         .map_err(|e| {
             Error::InvalidSignatureRequest(format!("Failed to parse auxilary_data: {}", e))
         })?;
+
+        let typed_config = serde_json::from_slice::<UserConfig>(
+            config
+                .ok_or(Error::Evaluation("No config provided.".to_string()))?
+                .as_slice(),
+        )
+        .map_err(|e| Error::Evaluation(format!("Failed to parse config: {}", e)))?;
 
         let api = get_offline_api(
             aux_data_json.genesis_hash,
@@ -108,7 +117,7 @@ impl Program for FaucetProgram {
 
         // balance constraint check
         // TODO: make this a user config option to generalize more
-        if aux_data_json.amount > 1000u128 {
+        if aux_data_json.amount > typed_config.max_transfer_amount {
             return Err(Error::Evaluation("Asked for too many tokens".to_string()));
         }
 
@@ -133,9 +142,8 @@ pub fn get_offline_api(
     transaction_version: u32,
 ) -> Result<OfflineClient<EntropyConfig>, Error> {
     let genesis_hash = {
-        let bytes = hex::decode(hash).map_err(|e| {
-            Error::InvalidSignatureRequest(format!("Failed to parse bytes: {}", e))
-        })?;
+        let bytes = hex::decode(hash)
+            .map_err(|e| Error::InvalidSignatureRequest(format!("Failed to parse bytes: {}", e)))?;
         H256::from_slice(&bytes)
     };
 

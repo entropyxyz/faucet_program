@@ -1,5 +1,12 @@
 use super::*;
 
+const CONFIG: &[u8] = r#"
+        {
+            "max_transfer_amount": 100
+        }
+    "#
+.as_bytes();
+
 #[test]
 fn test_should_sign() {
     let aux_data = create_aux_data();
@@ -7,7 +14,8 @@ fn test_should_sign() {
         aux_data.genesis_hash.clone(),
         aux_data.spec_version,
         aux_data.transaction_version,
-    );
+    )
+    .unwrap();
     let account_id = AccountId32::from_str(&aux_data.string_account_id).unwrap();
 
     let balance_transfer_tx = tx(
@@ -36,7 +44,7 @@ fn test_should_sign() {
         auxilary_data: Some(serde_json::to_string(&aux_data).unwrap().into_bytes()),
     };
 
-    assert!(FaucetProgram::evaluate(signature_request, None, None).is_ok());
+    assert!(FaucetProgram::evaluate(signature_request, Some(CONFIG.to_vec()), None).is_ok());
 }
 
 #[test]
@@ -46,7 +54,8 @@ fn test_should_fail() {
         aux_data.genesis_hash.clone(),
         aux_data.spec_version,
         aux_data.transaction_version,
-    );
+    )
+    .unwrap();
     let account_id = AccountId32::from_str(&aux_data.string_account_id).unwrap();
     aux_data.amount = 100000000;
 
@@ -76,7 +85,7 @@ fn test_should_fail() {
         auxilary_data: Some(serde_json::to_string(&aux_data).unwrap().into_bytes()),
     };
     assert_eq!(
-        FaucetProgram::evaluate(signature_request_bad_amount, None, None)
+        FaucetProgram::evaluate(signature_request_bad_amount, Some(CONFIG.to_vec()), None)
             .unwrap_err()
             .to_string(),
         "Error::Evaluation(\"Asked for too many tokens\")"
@@ -90,7 +99,7 @@ fn test_should_fail() {
     };
 
     assert_eq!(
-        FaucetProgram::evaluate(signature_request_bad_nonce, None, None)
+        FaucetProgram::evaluate(signature_request_bad_nonce, Some(CONFIG.to_vec()), None)
             .unwrap_err()
             .to_string(),
         "Error::Evaluation(\"Signatures don't match\")"
