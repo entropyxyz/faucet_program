@@ -11,7 +11,7 @@ use alloc::{
 };
 use entropy_programs_core::{bindgen::*, export_program, prelude::*};
 use serde::{Deserialize, Serialize};
-// pub mod api;
+
 #[cfg(test)]
 mod tests;
 use alloc::vec;
