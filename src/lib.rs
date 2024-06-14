@@ -122,7 +122,6 @@ impl Program for FaucetProgram {
         }
 
         // balance constraint check
-        // TODO: make this a user config option to generalize more
         if aux_data_json.amount > typed_config.max_transfer_amount {
             return Err(Error::Evaluation("Asked for too many tokens".to_string()));
         }
