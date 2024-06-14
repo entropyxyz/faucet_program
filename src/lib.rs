@@ -15,6 +15,7 @@ use serde::{Deserialize, Serialize};
 #[cfg(test)]
 mod tests;
 use alloc::vec;
+use blake2::{digest::consts::U32, Blake2b, Digest};
 use core::str::FromStr;
 use subxt::dynamic::tx;
 use subxt::ext::scale_value::Value;
@@ -99,7 +100,8 @@ impl Program for FaucetProgram {
         );
 
         let header: SubstrateHeader<u32, BlakeTwo256> =
-            serde_json::from_str(&aux_data_json.header_string).expect("valid block header");
+            serde_json::from_str(&aux_data_json.header_string)
+                .map_err(|e| Error::InvalidSignatureRequest(format!("Issue with header: {}", e)))?;
 
         let tx_params = Params::new()
             .mortal(&header, aux_data_json.mortality)
@@ -112,7 +114,11 @@ impl Program for FaucetProgram {
             .map_err(|e| Error::InvalidSignatureRequest(format!("partial api create: {}", e)))?;
         // compare message to tx built with params, now we can apply constraint logic to params with validated info
         if partial.signer_payload() != message {
-            return Err(Error::Evaluation("Signatures don't match".to_string()));
+            return Err(Error::Evaluation(format!(
+                "Signatures don't match, partial: {:?}, message: {:?}",
+                partial.signer_payload(),
+                message
+            )));
         }
 
         // balance constraint check
@@ -125,8 +131,13 @@ impl Program for FaucetProgram {
     }
 
     /// Since we don't use a custom hash function, we can just return `None` here.
-    fn custom_hash(_data: Vec<u8>) -> Option<Vec<u8>> {
-        None
+    fn custom_hash(data: Vec<u8>) -> Option<Vec<u8>> {
+        pub type Blake2b256 = Blake2b<U32>;
+        let mut hasher = Blake2b256::new();
+        hasher.update(&data);
+        let finalized = hasher.finalize();
+        let blake2 = &finalized[..];
+        Some(blake2.to_vec())
     }
 }
 use codec::Decode;

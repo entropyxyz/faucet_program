@@ -106,6 +106,24 @@ fn test_should_fail() {
     );
 }
 
+#[test]
+/// We are just going to test that the custom hash function works WITHOUT calling evaluate
+fn test_custom_hash() {
+    let message = "some_data_to_be_hashed".to_string().into_bytes();
+    type Blake2b256 = Blake2b<U32>;
+
+    let mut hasher = Blake2b256::new();
+    hasher.update(&message);
+    let finalized = hasher.finalize();
+    let blake2 = &finalized[..];
+    let expected_hash = blake2.to_vec();
+
+    let actual_hash = FaucetProgram::custom_hash(message).unwrap();
+
+    assert_eq!(actual_hash, expected_hash);
+    assert!(actual_hash.len() == 32);
+}
+
 pub fn create_aux_data() -> AuxData {
     let genesis_hash =
         "44670a68177821a6166b25f8d86b45e0f1c3b280ff576eea64057e4b0dd9ff4a".to_string();
@@ -122,7 +140,6 @@ pub fn create_aux_data() -> AuxData {
             "stateRoot": "0x0000000000000000000000000000000000000000000000000000000000000000"
         }
     "#;
-
     let mortality = 20u64;
     let nonce = 0u64;
     let string_account_id = "5FA9nQDVg267DEd8m1ZypXLBnvN7SFxYwV7ndqSYGiN9TTpu";
