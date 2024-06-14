@@ -35,9 +35,8 @@ async fn main() {
     pub struct UserConfig {
         max_transfer_amount: u128,
     }
-
     let faucet_user_config = UserConfig {
-        max_transfer_amount: 1_000_000u128,
+        max_transfer_amount: 1000_000_000_000_0u128,
     };
     let verifying_keys = [
         "036ebfa0ce36e61926937abc5ff7ff1c2abdec7f31acc915fcdb13923d5f18aa27",
@@ -74,6 +73,7 @@ async fn main() {
         .unwrap();
         let verfiying_key_account_string = blake2_256(&formatted_verifying_key.to_vec());
         let verfiying_key_account = AccountId32(verfiying_key_account_string);
+        dbg!(verfiying_key_account.clone().to_string());
 
         transfer(
             &api,
@@ -127,17 +127,6 @@ pub async fn transfer(
         .unwrap();
     Ok(())
 }
-// /// Convenience function to send a transaction to the Entropy chain giving a sr25519::Pair to sign with
-// pub async fn submit_transaction_with_pair<Call: TxPayload>(
-//     api: &OnlineClient<EntropyConfig>,
-//     rpc: &LegacyRpcMethods<EntropyConfig>,
-//     pair: &sr25519::Pair,
-//     call: &Call,
-//     nonce_option: Option<u32>,
-// ) -> Result<ExtrinsicEvents<EntropyConfig>, ()> {
-//     let signer = Sr25519Signer::new(pair.clone());
-//     submit_transaction(api, rpc, &signer, call, nonce_option).await
-// }
 
 /// Send a transaction to the Entropy chain
 ///
