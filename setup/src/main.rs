@@ -1,4 +1,4 @@
-// program - hash 0x890d2f3f7f19a5dc922fef2cb7dcd83dccd41e75638a926af7922cce643b9bf5
+// program - hash 0x970faa279ffb5ae99b3ae029780616aa3d5cf89e6f148f4291d6ef6aa3a060e6
 // veifying keys
 //
 //
@@ -46,7 +46,7 @@ async fn main() {
         "03f636d72766bd19e45894ba7e4b27a13244e5d2b88e5c8ef6e154c3b358f5a361",
     ];
     let faucet_program_hash =
-        H256::from_str("890d2f3f7f19a5dc922fef2cb7dcd83dccd41e75638a926af7922cce643b9bf5").unwrap();
+        H256::from_str("970faa279ffb5ae99b3ae029780616aa3d5cf89e6f148f4291d6ef6aa3a060e6").unwrap();
 
     let mnemonic = std::env::var("DEPLOYER_MNEMONIC").unwrap();
     let endpoint = std::env::var("CHAIN_ENDPOINT").unwrap();
