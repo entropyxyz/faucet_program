@@ -1,17 +1,18 @@
 use super::*;
-
+use subxt::config::PolkadotExtrinsicParamsBuilder as Params;
 const CONFIG: &[u8] = r#"
         {
-            "max_transfer_amount": 100
+            "max_transfer_amount": 100,
+            "genesis_hash": "44670a68177821a6166b25f8d86b45e0f1c3b280ff576eea64057e4b0dd9ff4a"
         }
     "#
 .as_bytes();
 
 #[test]
 fn test_should_sign() {
-    let aux_data = create_aux_data();
+    let (aux_data, genesis_hash) = create_aux_data();
     let api = get_offline_api(
-        aux_data.genesis_hash.clone(),
+        genesis_hash.clone(),
         aux_data.spec_version,
         aux_data.transaction_version,
     )
@@ -26,12 +27,7 @@ fn test_should_sign() {
             Value::u128(aux_data.amount),
         ],
     );
-    let header: SubstrateHeader<u32, BlakeTwo256> =
-        serde_json::from_str(&aux_data.header_string).expect("valid block header");
-    let tx_params = Params::new()
-        .mortal(&header, aux_data.mortality)
-        .nonce(aux_data.nonce)
-        .build();
+    let tx_params = Params::new().build();
 
     let partial = api
         .tx()
@@ -49,9 +45,9 @@ fn test_should_sign() {
 
 #[test]
 fn test_should_fail() {
-    let mut aux_data = create_aux_data();
+    let (mut aux_data, genesis_hash) = create_aux_data();
     let api = get_offline_api(
-        aux_data.genesis_hash.clone(),
+        genesis_hash.clone(),
         aux_data.spec_version,
         aux_data.transaction_version,
     )
@@ -67,12 +63,7 @@ fn test_should_fail() {
             Value::u128(aux_data.amount),
         ],
     );
-    let header: SubstrateHeader<u32, BlakeTwo256> =
-        serde_json::from_str(&aux_data.header_string).expect("valid block header");
-    let tx_params = Params::new()
-        .mortal(&header, aux_data.mortality)
-        .nonce(aux_data.nonce)
-        .build();
+    let tx_params = Params::new().build();
 
     let partial = api
         .tx()
@@ -91,7 +82,6 @@ fn test_should_fail() {
         "Error::Evaluation(\"Asked for too many tokens\")"
     );
 
-    aux_data.nonce = 100;
     aux_data.amount = 1;
     let signature_request_bad_nonce = SignatureRequest {
         message: partial.to_vec(),
@@ -102,7 +92,7 @@ fn test_should_fail() {
         FaucetProgram::evaluate(signature_request_bad_nonce, Some(CONFIG.to_vec()), None)
             .unwrap_err()
             .to_string(),
-        "Error::Evaluation(\"Signatures don't match\")"
+            "Error::Evaluation(\"Signatures don't match, message: \\\"07000088dc3417d5058ec4b4503e0c12ea1a0a89be200fe98922423d4334014fa6b0ee0284d7170000000a0000000a00000044670a68177821a6166b25f8d86b45e0f1c3b280ff576eea64057e4b0dd9ff4a44670a68177821a6166b25f8d86b45e0f1c3b280ff576eea64057e4b0dd9ff4a\\\", calldata: \\\"07000088dc3417d5058ec4b4503e0c12ea1a0a89be200fe98922423d4334014fa6b0ee04\\\", genesis_hash: \\\"34343637306136383137373832316136313636623235663864383662343565306631633362323830666635373665656136343035376534623064643966663461\\\"\")"
     );
 }
 
@@ -124,35 +114,19 @@ fn test_custom_hash() {
     assert!(actual_hash.len() == 32);
 }
 
-pub fn create_aux_data() -> AuxData {
+pub fn create_aux_data() -> (AuxData, String) {
     let genesis_hash =
         "44670a68177821a6166b25f8d86b45e0f1c3b280ff576eea64057e4b0dd9ff4a".to_string();
     let spec_version = 10;
     let transaction_version = 10;
-    let numeric_block_number_json = r#"
-        {
-            "digest": {
-                "logs": []
-            },
-            "extrinsicsRoot": "0x0000000000000000000000000000000000000000000000000000000000000000",
-            "number": 4,
-            "parentHash": "0xcb2690b2c85ceab55be03fc7f7f5f3857e7efeb7a020600ebd4331e10be2f7a5",
-            "stateRoot": "0x0000000000000000000000000000000000000000000000000000000000000000"
-        }
-    "#;
-    let mortality = 20u64;
-    let nonce = 0u64;
     let string_account_id = "5FA9nQDVg267DEd8m1ZypXLBnvN7SFxYwV7ndqSYGiN9TTpu";
     let amount = 100u128;
+
     let aux_data = AuxData {
-        genesis_hash,
         spec_version,
         transaction_version,
-        header_string: numeric_block_number_json.to_string(),
-        mortality: mortality.clone(),
-        nonce: nonce.clone(),
         string_account_id: string_account_id.to_string(),
         amount,
     };
-    aux_data
+    (aux_data, genesis_hash)
 }

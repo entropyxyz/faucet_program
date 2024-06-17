@@ -19,12 +19,8 @@ use blake2::{digest::consts::U32, Blake2b, Digest};
 use core::str::FromStr;
 use subxt::dynamic::tx;
 use subxt::ext::scale_value::Value;
+use subxt::utils::AccountId32;
 pub use subxt::PolkadotConfig as EntropyConfig;
-use subxt::{
-    config::substrate::{BlakeTwo256, SubstrateHeader},
-    config::PolkadotExtrinsicParamsBuilder as Params,
-    utils::AccountId32,
-};
 
 include!(concat!(env!("OUT_DIR"), "/metadata.rs"));
 
@@ -36,18 +32,15 @@ register_custom_getrandom!(always_fail);
 #[derive(Debug, PartialEq, Eq, Clone, Serialize, Deserialize)]
 pub struct UserConfig {
     max_transfer_amount: u128,
+    genesis_hash: String,
 }
 
 /// JSON representation of the auxiliary data
 #[cfg_attr(feature = "std", derive(schemars::JsonSchema))]
 #[derive(Debug, PartialEq, Eq, Clone, Serialize, Deserialize)]
 pub struct AuxData {
-    pub genesis_hash: String,
     pub spec_version: u32,
     pub transaction_version: u32,
-    pub header_string: String,
-    pub mortality: u64,
-    pub nonce: u64,
     pub string_account_id: String,
     pub amount: u128,
 }
@@ -84,7 +77,7 @@ impl Program for FaucetProgram {
         .map_err(|e| Error::Evaluation(format!("Failed to parse config: {}", e)))?;
 
         let api = get_offline_api(
-            aux_data_json.genesis_hash,
+            typed_config.genesis_hash.clone(),
             aux_data_json.spec_version,
             aux_data_json.transaction_version,
         )?;
@@ -98,26 +91,17 @@ impl Program for FaucetProgram {
                 Value::u128(aux_data_json.amount),
             ],
         );
+        let call_data = api.tx().call_data(&balance_transfer_tx).unwrap();
 
-        let header: SubstrateHeader<u32, BlakeTwo256> =
-            serde_json::from_str(&aux_data_json.header_string)
-                .map_err(|e| Error::InvalidSignatureRequest(format!("Issue with header: {}", e)))?;
+        let hex_message = hex::encode(message);
+        let hex_call_data = hex::encode(call_data);
+        let hex_genesis_hash = hex::encode(typed_config.genesis_hash);
 
-        let tx_params = Params::new()
-            .mortal(&header, aux_data_json.mortality)
-            .nonce(aux_data_json.nonce)
-            .build();
-
-        let partial = api
-            .tx()
-            .create_partial_signed_offline(&balance_transfer_tx, tx_params)
-            .map_err(|e| Error::InvalidSignatureRequest(format!("partial api create: {}", e)))?;
         // compare message to tx built with params, now we can apply constraint logic to params with validated info
-        if partial.signer_payload() != message {
+        if !&hex_message.contains(&hex_call_data) && !&hex_message.contains(&hex_genesis_hash) {
             return Err(Error::Evaluation(format!(
-                "Signatures don't match, partial: {:?}, message: {:?}",
-                partial.signer_payload(),
-                message
+                "Signatures don't match, message: {:?}, calldata: {:?}, genesis_hash: {:?}",
+                hex_message, hex_call_data, hex_genesis_hash,
             )));
         }
 
