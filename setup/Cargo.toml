@@ -10,3 +10,4 @@ serde_json         ="1.0"
 tokio  ={ version="1.38", features=["macros", "fs", "rt-multi-thread", "io-util", "process", "sync"] }
 dotenv = "0.15.0"
 hex             ={ version="0.4.3" }
+codec       ={ package="parity-scale-codec", version="3.0.0", default-features=false }

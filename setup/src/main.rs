@@ -1,4 +1,4 @@
-// program - hash 0x970faa279ffb5ae99b3ae029780616aa3d5cf89e6f148f4291d6ef6aa3a060e6
+// program - hash 0xa4207903011bddac8cbba9251fd3eaff133e6704f41c5645b3d9a79fbab0986b
 // veifying keys
 //
 //
@@ -6,6 +6,7 @@
 //
 // 1_000_000_000
 
+use codec::Encode;
 use serde::{Deserialize, Serialize};
 pub use subxt::PolkadotConfig as EntropyConfig;
 use subxt::{
@@ -28,16 +29,14 @@ use std::str::FromStr;
 #[tokio::main]
 async fn main() {
     dotenv().ok();
-    println!("Hello, world!");
 
     #[cfg_attr(feature = "std", derive(schemars::JsonSchema))]
     #[derive(Debug, PartialEq, Eq, Clone, Serialize, Deserialize)]
     pub struct UserConfig {
         max_transfer_amount: u128,
+        genesis_hash: String,
     }
-    let faucet_user_config = UserConfig {
-        max_transfer_amount: 1000_000_000_000_0u128,
-    };
+
     let verifying_keys = [
         "036ebfa0ce36e61926937abc5ff7ff1c2abdec7f31acc915fcdb13923d5f18aa27",
         "0271447572fd939aaf2c363930c330130966713030ecaf22ca0c22ae721688cede",
@@ -46,19 +45,39 @@ async fn main() {
         "03f636d72766bd19e45894ba7e4b27a13244e5d2b88e5c8ef6e154c3b358f5a361",
     ];
     let faucet_program_hash =
-        H256::from_str("970faa279ffb5ae99b3ae029780616aa3d5cf89e6f148f4291d6ef6aa3a060e6").unwrap();
+        H256::from_str("a4207903011bddac8cbba9251fd3eaff133e6704f41c5645b3d9a79fbab0986b").unwrap();
 
     let mnemonic = std::env::var("DEPLOYER_MNEMONIC").unwrap();
     let endpoint = std::env::var("CHAIN_ENDPOINT").unwrap();
 
     let keypair = <sr25519::Pair as Pair>::from_string(&mnemonic, None).unwrap();
     let signer = PairSigner::<EntropyConfig, sr25519::Pair>::new(keypair);
-    dbg!(signer.account_id().to_string());
+
+    println!(
+        "Sending with this account: {:?}",
+        signer.account_id().to_string()
+    );
+
     let api = get_api(&endpoint).await.unwrap();
     let rpc = get_rpc(&endpoint).await.unwrap();
+    let genesis_hash = &api.genesis_hash();
+
+    let faucet_user_config = UserConfig {
+        max_transfer_amount: 1000_000_000_000_0u128,
+        genesis_hash: hex::encode(genesis_hash.encode()),
+    };
+
     for verifying_key in verifying_keys {
         let formatted_verifying_key: [u8; 33] =
             hex::decode(verifying_key).unwrap().try_into().unwrap();
+        let verfiying_key_account_string = blake2_256(&formatted_verifying_key.to_vec());
+        let verfiying_key_account = AccountId32(verfiying_key_account_string);
+
+        println!(
+            "Acting on this verifying key: {:?}",
+            verfiying_key_account.clone().to_string()
+        );
+
         update_programs(
             &api,
             &rpc,
@@ -71,9 +90,6 @@ async fn main() {
         )
         .await
         .unwrap();
-        let verfiying_key_account_string = blake2_256(&formatted_verifying_key.to_vec());
-        let verfiying_key_account = AccountId32(verfiying_key_account_string);
-        dbg!(verfiying_key_account.clone().to_string());
 
         transfer(
             &api,
@@ -85,10 +101,6 @@ async fn main() {
         .await
         .unwrap();
     }
-
-    // change to faucet and program instance change_program_instance
-
-    // fund all those accouts (convert veryfying keys to addresses)
 }
 
 /// Update the program pointers associated with a given entropy account
@@ -99,7 +111,6 @@ pub async fn update_programs(
     verifying_key: [u8; 33],
     program_instance: BoundedVec<ProgramInstance>,
 ) -> Result<(), ()> {
-    dbg!(verifying_key.clone());
     let update_pointer_tx = entropy::tx()
         .registry()
         .change_program_instance(BoundedVec(verifying_key.to_vec()), program_instance);
@@ -117,8 +128,6 @@ pub async fn transfer(
     account: AccountId32,
     amount: u128,
 ) -> Result<(), ()> {
-    dbg!(account.clone().to_string());
-    dbg!(amount);
     let transfer_tx = entropy::tx()
         .balances()
         .transfer_allow_death(account.into(), amount);
