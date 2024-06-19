@@ -4290,6 +4290,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "setup"
+version = "0.1.0"
+dependencies = [
+ "dotenv",
+ "hex",
+ "parity-scale-codec",
+ "serde",
+ "serde_json",
+ "subxt",
+ "tokio",
+]
+
+[[package]]
 name = "sha-1"
 version = "0.9.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
