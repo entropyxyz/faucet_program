@@ -1,10 +1,10 @@
-// program - hash 0xa4207903011bddac8cbba9251fd3eaff133e6704f41c5645b3d9a79fbab0986b
+// program - hash 0x12af0bd1f2d91f12e34aeb07ea622c315dbc3c2bdc1e25ff98c23f1e61106c77
 // veifying keys
-//
-//
-//
-//
-// 1_000_000_000
+// 0x03f424aa75f2e2f21442c6b4008f680e36d8c104e1b0e2f4205cef1d4680944c68
+// 0x027e5556e9b5c1bd6577e6f9934234b0e1f478514b6a0d28b692541f8ee9a108c2
+// 0x03a2eeab8b1c9f0c15e9e6905f7340b9a973d794333b5ba460c2ea2b194e09df0b
+// 0x032e70ab85f58977319ad4110ed9d97edad471a6a695ed13338be59a140bdb118b
+// 0x0379d339146c99b5af0d8dd37a243a1b4d8f56bdc256ec904d977bed058ca162be
 
 use codec::Encode;
 use serde::{Deserialize, Serialize};
@@ -38,14 +38,14 @@ async fn main() {
     }
 
     let verifying_keys = [
-        "036ebfa0ce36e61926937abc5ff7ff1c2abdec7f31acc915fcdb13923d5f18aa27",
-        "0271447572fd939aaf2c363930c330130966713030ecaf22ca0c22ae721688cede",
-        "02ad6e45bf00de3be338b465e5d2a8eafbc6874484f305bc399d148005b09a6c79",
-        "039b34b15ad2894925b4e114c83a458e8f1895e1d6abd0c66a9cffc8dfeaa248d2",
-        "03f636d72766bd19e45894ba7e4b27a13244e5d2b88e5c8ef6e154c3b358f5a361",
+        "03f424aa75f2e2f21442c6b4008f680e36d8c104e1b0e2f4205cef1d4680944c68",
+        "027e5556e9b5c1bd6577e6f9934234b0e1f478514b6a0d28b692541f8ee9a108c2",
+        "027e5556e9b5c1bd6577e6f9934234b0e1f478514b6a0d28b692541f8ee9a108c2",
+        "032e70ab85f58977319ad4110ed9d97edad471a6a695ed13338be59a140bdb118b",
+        "0379d339146c99b5af0d8dd37a243a1b4d8f56bdc256ec904d977bed058ca162be",
     ];
     let faucet_program_hash =
-        H256::from_str("a4207903011bddac8cbba9251fd3eaff133e6704f41c5645b3d9a79fbab0986b").unwrap();
+        H256::from_str("12af0bd1f2d91f12e34aeb07ea622c315dbc3c2bdc1e25ff98c23f1e61106c77").unwrap();
 
     let mnemonic = std::env::var("DEPLOYER_MNEMONIC").unwrap();
     let endpoint = std::env::var("CHAIN_ENDPOINT").unwrap();
@@ -63,7 +63,7 @@ async fn main() {
     let genesis_hash = &api.genesis_hash();
 
     let faucet_user_config = UserConfig {
-        max_transfer_amount: 1000_000_000_000_0u128,
+        max_transfer_amount: 10_000_000_000u128,
         genesis_hash: hex::encode(genesis_hash.encode()),
     };
 
