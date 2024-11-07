@@ -51,7 +51,7 @@ impl Program for FaucetProgram {
     fn evaluate(
         signature_request: SignatureRequest,
         config: Option<Vec<u8>>,
-        _oracle_data: Option<Vec<u8>>,
+        _oracle_data: Option<Vec<Vec<u8>>>,
     ) -> Result<(), Error> {
         let SignatureRequest {
             message,
